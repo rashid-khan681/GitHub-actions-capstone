@@ -1,0 +1,61 @@
+# Goal: Reusable build $ test workflow for golang microservices
+# Description: This workflow acts as a modular template. It can be called by
+#              other workflows (like PR checks or Main branch deployments).
+#              It sets up Go, caches dependencies, compiles code, and runs tests.
+
+name: Reusable Build and Test
+
+# 'workflow_call' makes this a reusable module rather than a standalone pipeline.
+# It accepts dynamic inputs so it can be reused for different derectories/versions.
+
+on:
+    workflow_call:
+        inputs:
+            working-directory:
+                description: 'Directory of the microservice (e.g., ./backend)'
+                required: false
+                default: './backend'
+                type: string
+            go-version:
+                description: 'Go version to use for the environment setup'
+                required: false
+                default: '1.22'
+                type: string
+
+# Jobs Configuration
+# Defines the execution environment (Ubuntu) and sets the default directory
+# so we don't have to repeat 'cd' in every step.
+
+jobs:
+    build-and-test:
+        name: Build & Test Go App
+        runs-on: ubuntu-latest
+
+        defaults:
+            run:
+                working-directory: ${{ inputs.working-directory }}
+
+        steps:
+            # Step 1: Clone the repository into the GitHub Actions runner
+            - name: Checkout Code
+              uses: actions/checkout@v7
+
+            # Step 2: Install Go and enable dependency caching for faster execution times
+            - name: Setup Go Environment 
+              uses: actions/setup-go@v5
+              with:
+                go-version: ${{ inputs.go-version }}
+                cache-dependency-path: ${{ inputs.working-directory }}/go.sum
+
+            # Step 3: Download all required Go modules defined in go.mod/go.sum
+            - name: Download dependencies 
+              run: go mod download
+
+            # Step 4: Compile the application to ensure there are no syntax/build errors
+            - name: Build Application
+              run: go build -v ./...
+
+            # Step 5: Execute unit tests to verify business logic passes
+            - name: Run Unit Test
+              run: go test -v ./...
+              
