@@ -8,20 +8,20 @@ name: Reusable Docker Build and Push
 on:
     workflow_call:
         inputs:
+            image-name:
+                description: 'Name of the Docker image'
+                required: true
+                type: string
+            tag:
+                description: 'Tag for the Docker image'
+                required: true
+                type: string
             working-directory:
                 description: 'Directory containing the Dockerfile (e.g., ./backend)'
                 required: false
                 default: './backend'
                 type: string
-            image-name:
-                description: 'Name of the Docker image'
-                required: true
-                type: string
-            image-tag:
-                description: 'Tag for the Docker image'
-                required: false
-                default: 'latest'
-                type: string
+            
         
         # secrets passed from the caller workflow for secure login
         secrets:
@@ -30,10 +30,18 @@ on:
             DOCKER_PASSWORD:
                 required: true
 
+        outputs:
+            image_url:
+                description: 'Full path of the pushed Docker image'
+                value: ${{ jobs.docker-build-push.outputs.final_image_url }}
+
 jobs:
     docker-build-push:
         name: Build and Push Docker Image
         runs-on: ubuntu-latest
+
+        outputs:
+            final_image_url: ${{ steps.set-output.outputs.final_image_url }}
 
         defaults:
             run:
@@ -56,7 +64,12 @@ jobs:
               with:
                 context: ${{ inputs.working-directory }}
                 push: true
-                tags: ${{ inputs.image-name }}:${{ inputs.image-tag }}
+                tags: ${{ inputs.image-name }}:${{ inputs.tag }}
+
+            - name: Set image URL output
+              id: set-output
+              run: |
+                echo "final_image_url=${{ inputs.image-name }}:${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
                 
 
 
