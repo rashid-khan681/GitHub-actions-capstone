@@ -20,6 +20,10 @@ jobs:
             - name: Check Health
               id: health_check
               run: |
+                echo  "====== CONTAINER LOGS ======"
+                docker logs backend-health-test
+                echo "==============================="
+
                 if curl -s -f http://localhost:8081/ > /dev/null; then
                   echo "Health Check: PASSED ✅"
                   echo "status=PASSED ✅" >> $GITHUB_ENV
@@ -28,6 +32,7 @@ jobs:
                   echo "status=FAILED ❌" >> $GITHUB_ENV
                   exit 1
                 fi
+                
             - name: Clean up Container
               if: always()
               run: |
