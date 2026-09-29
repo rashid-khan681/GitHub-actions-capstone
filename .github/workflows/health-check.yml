@@ -1,0 +1,43 @@
+# Goal: Scheduled Health Check, Runs every 12 hours & manually. Pulls image, tests it, cleans up.
+
+name: scheduled health check 
+
+on:
+    schedule:
+        - cron: '0 */12 * * *'
+    workflow_dispatch: 
+
+jobs:
+    health-check:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Pull Latest Docker Image
+              run: docker pull rashidkhan6685/devboard-backend:latest
+
+            - name: Run Container 
+              run: docker run -d -e PORT=8080 -p 8081:8080 --name backend-health-test rashidkhan6685/devboard-backend:latest
+
+            - name: Check Health
+              id: health_check
+              run: |
+                if curl -s -f http://localhost:8081/ > /dev/null; then
+                  echo "Health Check: PASSED ✅"
+                  echo "status=PASSED ✅" >> $GITHUB_ENV
+                else
+                  echo "Health Check: FAILED ❌"
+                  echo "status=FAILED ❌" >> $GITHUB_ENV
+                  exit 1
+                fi
+            - name: Clean up Container
+              if: always()
+              run: |
+                docker stop backend-health-test || true
+                docker rm backend-health-test || true
+
+            - name: Generate Health Report Summary
+              if: always()
+              run: |
+                echo "## Health Check Report" >> $GITHUB_STEP_SUMMARY
+                echo "Image: rashidkhan6685/devboard-backend:latest" >> $GITHUB_STEP_SUMMARY
+                echo "Status: $status" >> $GITHUB_STEP_SUMMARY
+                echo "Time: $(date)" >> $GITHUB_STEP_SUMMARY
