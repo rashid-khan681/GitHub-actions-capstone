@@ -23,7 +23,7 @@ jobs:
             working-directory: './backend'
         secrets:
             docker_username: ${{ secrets.DOCKER_USERNAME }}
-            docker_token: ${{ secrets.DOCKER_PASSWORD }}
+            docker_password: ${{ secrets.DOCKER_PASSWORD }}
 
     deploy:
         name: Production Deployment 
