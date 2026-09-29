@@ -11,38 +11,62 @@ jobs:
     health-check:
         runs-on: ubuntu-latest
         steps:
-            - name: Pull Latest Docker Image
-              run: docker pull rashidkhan6685/devboard-backend:latest
+            - name: Checkout Repository
+              uses: actions/checkout@v7
 
-            - name: Run Container 
-              run: docker run -d -e PORT=8080 -p 8081:8080 --name backend-health-test rashidkhan6685/devboard-backend:latest
+            - name: Create Network
+              run: docker network create devboard-net
 
-            - name: Check Health
+            - name: Start PostgreSQL Database
+              run: |
+                docker run -d --name postgres --network devboard-net \
+                  -e POSTGRES_USER=devboard \
+                  -e POSTGRES_PASSWORD=devboard \
+                  -e POSTGRES_DB=devboard \
+                  -v "$PWD/init/postgres":/docker-entrypoint-initdb.d:ro \
+                  -p 5432:5432 \
+                  postgres:16-alpine
+                sleep 10 # Database initialize hone ke liye 10 second ka wait
+
+            - name: Run Backend Container
+              run: |
+                docker run -d --name backend-health-test --network devboard-net \
+                  -e PORT=8080 \
+                  -e POSTGRES_URL="postgres://devboard:devboard@postgres:5432/devboard?sslmode=disable" \
+                  -p 8081:8080 \
+                  rashidkhan6685/devboard-backend:latest
+                sleep 5 # Backend start hone ke liye wait
+
+            - name: 🩺 Check Health
               id: health_check
               run: |
-                echo  "====== CONTAINER LOGS ======"
-                docker logs backend-health-test
-                echo "==============================="
-
+                echo "Pinging Health Endpoint..."
                 if curl -s -f http://localhost:8081/ > /dev/null; then
                   echo "Health Check: PASSED ✅"
                   echo "status=PASSED ✅" >> $GITHUB_ENV
                 else
                   echo "Health Check: FAILED ❌"
                   echo "status=FAILED ❌" >> $GITHUB_ENV
+                  echo "====== CONTAINER LOGS ======"
+                  docker logs backend-health-test
                   exit 1
                 fi
-                
+
             - name: Clean up Container
-              if: always()
+              if: always() 
               run: |
                 docker stop backend-health-test || true
                 docker rm backend-health-test || true
+                docker stop postgres || true
+                docker rm postgres || true
+                docker network rm devboard-net || true
 
             - name: Generate Health Report Summary
               if: always()
               run: |
                 echo "## Health Check Report" >> $GITHUB_STEP_SUMMARY
                 echo "Image: rashidkhan6685/devboard-backend:latest" >> $GITHUB_STEP_SUMMARY
-                echo "Status: $status" >> $GITHUB_STEP_SUMMARY
+                echo "Status: ${{ env.status }}" >> $GITHUB_STEP_SUMMARY
                 echo "Time: $(date)" >> $GITHUB_STEP_SUMMARY
+            
+            
