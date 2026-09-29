@@ -1,5 +1,17 @@
 # DevBoard — Advanced (UI + Go + Postgres)
 
+# 🚀 DevBoard Backend - CI/CD Capstone
+
+![PR Pipeline](https://github.com/rashid-khan681/GitHub-actions-capstone/actions/workflows/pr-pipeline.yml/badge.svg)
+![Main Pipeline](https://github.com/rashid-khan681/GitHub-actions-capstone/actions/workflows/main-pipeline.yml/badge.svg)
+![Health Check](https://github.com/rashid-khan681/GitHub-actions-capstone/actions/workflows/health-check.yml/badge.svg)
+
+## 🏗️ Pipeline Architecture
+
+1. **Pull Request Flow:** PR opened → Trigger `pr-pipeline` → Call reusable build & test → PR checks pass (No Docker push).
+2. **Main Deployment Flow:** Merge to main → Trigger `main-pipeline` → Call build & test → Call reusable Docker build & push (tag: `latest` & `sha`) → Deploy job (waits for manual approval) → Push to Production.
+3. **Continuous Monitoring:** Every 12 hours (Cron) → Trigger `health-check` → Pull latest image → Run with Postgres → Ping `/health` → Generate Action Summary.
+
 This is the same DevBoard UI as the `master` branch, but now the data comes
 from a **real backend** instead of fake in-memory data.
 
