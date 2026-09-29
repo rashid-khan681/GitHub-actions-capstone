@@ -1,0 +1,25 @@
+# Goal: PR pipeline, Triggers on PR to main. Runs tests but does not build/push Docker.
+
+name: PR Pipeline
+
+on:
+    pull_request:
+        branches:
+            - main
+        types: [opened, synchronize]
+
+jobs:
+    call-build-test:
+        uses: ./.github/workflows/reusable-build-test.yml
+        with:
+            run_tests: true
+            working-directory: './backend'
+
+    pr-comment:
+        name: Add PR Comment
+        needs: call-build-test
+        runs-on: ubuntu-latest
+        steps:
+            - name: Print PR Summary
+              run: |
+                echo "PR checks passed for branch: ${{ github.head_ref }}"
