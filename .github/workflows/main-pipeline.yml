@@ -46,12 +46,41 @@ jobs:
                 path: trivy-report.txt
 
     deploy:
-        name: Production Deployment 
         needs: security-scan
         runs-on: ubuntu-latest
         environment: production
-
         steps:
-            - name: Trigger Deployment
-              run: |
-                echo "Deploying image: ${{ needs.build-and-push-docker.outputs.image_url }} to production"
+            - name: Checkout Code
+              uses: actions/checkout@v7
+
+            - name: Copy files to EC2 via SCP
+              uses: appleboy/scp-action@master
+              with:
+                host: ${{ secrets.EC2_HOST }}
+                username: ${{ secrets.EC2_USERNAME }}
+                key: ${{ secrets.EC2_SSH_KEY }}
+                source: "docker-compose.yml,init/postgres/,.env.example"
+                target: "/home/ubuntu/devboard-app"
+
+            - name: Execute Deployment on EC2 via SSH
+              uses: appleboy/ssh-action@master
+              with:
+                host: ${{ secrets.EC2_HOST }}
+                username: ${{ secrets.EC2_USERNAME }}
+                key: ${{ secrets.EC2_SSH_KEY }}
+                script: |
+                    cd /home/ubuntu/devboard-app
+
+                    # 2. README step: Settings live in .env
+                    cp .env.example .env
+
+                    # 3. pull the latest image from Docker hub
+                    docker compose pull
+
+                    # 4. Run the container in background (detached mode)
+                    docker compose up -d
+
+                    # 5. Deletes the unused and older images so ec2 storage wonnot full.
+                    docker image prune -af
+
+
