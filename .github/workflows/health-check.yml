@@ -37,11 +37,11 @@ jobs:
                   rashidkhan6685/devboard-backend:latest
                 sleep 5 # Backend start hone ke liye wait
 
-            - name: 🩺 Check Health
+            - name: Check Health
               id: health_check
               run: |
                 echo "Pinging Health Endpoint..."
-                if curl -s -f http://localhost:8081/ > /dev/null; then
+                if curl -s -f http://localhost:8081/health > /dev/null; then
                   echo "Health Check: PASSED ✅"
                   echo "status=PASSED ✅" >> $GITHUB_ENV
                 else
