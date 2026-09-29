@@ -21,6 +21,18 @@ on:
                 required: false
                 default: '1.22'
                 type: string
+            run_tests:
+                description: 'Condition to run unit tests'
+                required: false
+                default: true
+                type: boolean
+
+        outputs:
+            test_result:
+                description: "Result of the tests (passed or failed)"
+                value: ${{ jobs.build-and-test.outputs.final_test_result }}
+
+
 
 # Jobs Configuration
 # Defines the execution environment (Ubuntu) and sets the default directory
@@ -30,6 +42,9 @@ jobs:
     build-and-test:
         name: Build & Test Go App
         runs-on: ubuntu-latest
+
+        outputs:
+            final_test_result: ${{ steps.set-output.outputs.test_result }}
 
         defaults:
             run:
@@ -56,6 +71,17 @@ jobs:
               run: go build -v ./...
 
             # Step 5: Execute unit tests to verify business logic passes
-            - name: Run Unit Test
+            - name: Run Unit Tests
+              if: ${{ inputs.run_tests == true }}
               run: go test -v ./...
+
+            - name: Set test Output
+              id: set-output
+              if: always()
+              run: |
+                if [ "${{ job.status }}" == "success" ]; then
+                  echo "test_result=passed" >> "$GITHUB_OUTPUT"
+                else
+                  echo "test_result=failed" >> "$GITHUB_OUTPUT"
+                fi
               
